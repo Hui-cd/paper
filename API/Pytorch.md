@@ -30,3 +30,8 @@ tensor2 = torch.randn(4, 5)
 torch.matmul(tensor1, tensor2).size() 
 ```
 
+**torch.transpose(input, dim0, dim1) → Tensor** 返回一个tensor其是input的转置，交换给点的维度dim0和dim1
+**torch.t** 其输入的维度小于等于2-d，返回input的转置
+
+**Tensor.masked_fill_(mask, value)** 
+
