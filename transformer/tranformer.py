@@ -1,29 +1,32 @@
 import torch.nn as nn
 import torch
 import math
+import copy
+import torch.nn.functional as F
 
-def attention(query,key,value,mask = None):
-    d_k = key.size(-1)
-    score = torch.matmul(query,key.transpose(-2,-1))/math.sqrt(d_k)
-    if mask is not None:
-       score = score.masked_fill(mask==0,1e9) 
-    return score    
-    
-def mask_attention(score):
-    pass
-    
+def attention(key,query,value,maske=None):
+    key_t = key.transpose(-2,-1)
+    d_k = query.size(-1)
+    score = torch.matmul(key_t,query)/math.sqrt(d_k)
+    return score
 
+
+def clones(module, N):
+    """
+    生成N个相同的层
+    :param module:(nn.Module)输入模型
+    :param N:(int)重复次数
+    :return: 复制生成的模型列表
+    """
+    return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])
+
+class MutilHeadAttention(nn.Module):
+    def __init__(self,h,d_model) -> None:
+        super(MutilHeadAttention,self).__init__()
+        self.h = h
+        
+    def forward():
+        
 if __name__ == "__main__":
-    query = torch.ones(2, 4,3)
-    key = torch.ones(2, 4)
-    value = torch.ones(2, 4)
-    
-    # result = key.transpose(-2,-1)
-    tensor1 = torch.randn(4, 5,5)
-    tensor2 = torch.randn(4, 5)
-    
-    # result = torch.matmul(tensor1, tensor2).size() 
-    # result = attention(query=tensor1,key=tensor2,value=value,mask=None)
-    print(query)
-    print(query.transpose(0,1))
-    # print(result)
+    key = torch.ones(2,2,3)
+    print(key.size())
