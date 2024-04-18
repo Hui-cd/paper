@@ -8,10 +8,9 @@ class MultiHeadInfiniAttention(nn.Module):
         self.dim_input = dim_input
         self.dim_k = dim_k
         self.dim_v = dim_v
-        # self.dim_q = dim_q
         self.segment_length = segment_length
         self.beta = nn.Parameter()
-        self.w_q = nn.Linear(dim_input,dim_input*n_head)
+        self.w_q = nn.Linear(dim_input,dim_k*n_head)
         self.w_k = nn.Linear(dim_input,dim_k*n_head)
         self.w_v = nn.Linear(dim_input,dim_v*n_head)
         
