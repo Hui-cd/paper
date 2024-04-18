@@ -3,17 +3,17 @@ import torch.nn as nn
 
 
 class MultiHeadInfiniAttention(nn.Module):
-    def __init__(self,n_head,dim_input,dim_k,dim_q,dim_v,segment_length):
+    def __init__(self,n_head,dim_input,dim_k,dim_v,segment_length):
         super(MultiHeadInfiniAttention).__init__()
         self.dim_input = dim_input
         self.dim_k = dim_k
         self.dim_v = dim_v
-        self.dim_q = dim_q
+        # self.dim_q = dim_q
         self.segment_length = segment_length
         self.beta = nn.Parameter()
-        w_q = nn.Linear(dim_input,dim_q*n_head)
-        w_k = nn.Linear(dim_input,dim_k*n_head)
-        w_v = nn.Linear(dim_input,dim_v*n_head)
+        self.w_q = nn.Linear(dim_input,dim_input*n_head)
+        self.w_k = nn.Linear(dim_input,dim_k*n_head)
+        self.w_v = nn.Linear(dim_input,dim_v*n_head)
         
     def memory_retrieval(self,memory,z,q):
         segma_q = nn.ELU(q)
@@ -33,8 +33,20 @@ class MultiHeadInfiniAttention(nn.Module):
         a = nn.Sigmoid(self.beta)*a_mem + (1 - nn.Sigmoid(self.beta))*a_dot
         return a
     
-        
-        
+    def forward(self,x):
+        batch_size,sequence_len,dim_input =x.shape
+        n_seq, rem = divmod(sequence_len,segment_len)
+        k = self.w_k()
+    
+if __name__ == '__main__':
+    n_head = 8
+    dim_input = 512
+    dim_key = 64
+    dim_value = 64
+    segment_len = 32
+    model = MultiHeadInfiniAttention(n_head=n_head,dim_input=dim_input,dim_k=dim_key,segment_length=segment_len)
+    batch = torch.randn(4, 128, dim_input)
+    
         
                  
 
