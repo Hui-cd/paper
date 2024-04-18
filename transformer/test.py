@@ -1,12 +1,24 @@
 import torch
 import torch.nn.parameter as Parameter
 
-# 创建一个形状为 (3, 4) 的可学习参数，初始值随机生成
-param = Parameter(torch.randn(3, 4))
+import torch
+import torch.nn as nn
 
-# 创建一个形状为 (2, 2) 的可学习参数，初始值为指定的张量值
-initial_data = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
-param2 = Parameter(initial_data)
+import torch
+import torch.nn as nn
 
-# 创建一个不需要计算梯度的可学习参数
-param_no_grad = Parameter(torch.zeros(2, 2), requires_grad=False)
+# 假设x是从卷积层得到的输出，形状为 [batch_size, 32, 32, 10]
+x = torch.randn(1, 32, 32, 10)  # 模拟一批数据中的一个样本
+
+# 展平操作
+x_flattened = x.view(x.size(0), -1)  # 变换成 [1, 10240]
+
+# 全连接层
+fc_layer = nn.Linear(10240, 10)  # 从10240维降到128维
+output = fc_layer(x_flattened)  # 得到全连接层的输出
+
+# 激活函数
+activated_output = nn.ReLU()(output)
+
+# 输出结果
+print("Output of the fully connected layer:", activated_output)
