@@ -1,9 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F  # Import functional module
-
-import torch
-import torch.nn as nn
 import torch.nn.functional as F
 
 class MultiHeadInfiniAttention(nn.Module):
@@ -19,38 +15,52 @@ class MultiHeadInfiniAttention(nn.Module):
         self.w_q = nn.Linear(dim_input, n_head * dim_k)
         self.w_k = nn.Linear(dim_input, n_head * dim_k)
         self.w_v = nn.Linear(dim_input, n_head * dim_v)
+        self.out = nn.Linear(n_head * dim_v, dim_input) 
 
     def forward(self, x):
-        batch_size, sequence_len, _ = x.shape
-        n_seq, rem = divmod(sequence_len, self.segment_length)
+        batch_size, seq_len, _ = x.shape
+        n_seq, rem = divmod(seq_len, self.segment_length)
         if rem != 0:
             raise ValueError("Sequence length must be divisible by the segment length.")
 
-        memory = torch.zeros(batch_size, self.n_head, self.dim_k, self.dim_v, device=x.device)
+        # Initialize memory and normalization factor
+        mem = torch.zeros(batch_size, self.n_head, self.dim_k, self.dim_v, device=x.device)
         z = torch.zeros(batch_size, self.n_head, self.dim_k, 1, device=x.device)
 
         outputs = []
-        for i in range(n_seq):
-            start = i * self.segment_length
-            end = start + self.segment_length
-            segment = x[:, start:end, :]
-
+        for ix in range(n_seq):
+            ix_lo = ix * self.segment_length
+            ix_hi = ix_lo + self.segment_length
+            segment = x[:, ix_lo:ix_hi, :]
+            
+            # Project segment to queries, keys, and values
             k = self.w_k(segment).view(batch_size, -1, self.n_head, self.dim_k).transpose(1, 2)
-            q = self.w_q(segment).view(batch_size, -1, self.n_head, self.dim_k).transpose(1, 2)
             v = self.w_v(segment).view(batch_size, -1, self.n_head, self.dim_v).transpose(1, 2)
+            q = self.w_q(segment).view(batch_size, -1, self.n_head, self.dim_k).transpose(1, 2)
 
-            memory, z = self.memory_update(k, v, memory, z)
-            
-            # Retrieve memory-based attention and apply scaled dot-product attention
-            a_mem = self.memory_retrieval(memory, z, q)
-            a_dot = F.softmax(q @ k.transpose(-2, -1) / torch.sqrt(torch.tensor(self.dim_k)), dim=-1) @ v
-            
-            # Integrate both types of attention using long-term context injection
-            combined_attention = self.long_term_context_injection(a_mem.mean(dim=1), a_dot.mean(dim=1))
-            outputs.append(combined_attention)
+            # Update memory and normalization factor
+            mem, z = self.memory_update(k, v, mem, z)
 
-        # Concatenate all segment outputs
+            # Compute attention
+            sigma_q = F.elu(q) + 1.0
+            att_dot = F.softmax(q @ k.transpose(-2, -1) / torch.sqrt(torch.tensor(self.dim_k)), dim=-1) @ v
+            att_mem = (sigma_q @ mem) / (sigma_q @ z)
+
+            # Weighted average of attentions
+            att = F.sigmoid(self.beta) * att_mem + (1 - F.sigmoid(self.beta)) * att_dot
+            att = att.view(batch_size, self.segment_length, self.n_head * self.dim_v)
+
+            # Append processed segment to outputs
+            outputs.append(self.out(att))
+
+        # Concatenate all segments to form the full sequence output
         return torch.cat(outputs, dim=1)
+
+    def memory_update(self, k, v, mem, z):
+        sigma_k = F.elu(k) + 1.0
+        mem += sigma_k.transpose(-2, -1) @ v
+        z += sigma_k.sum(dim=2, keepdim=True) * self.segment_length
+        return mem, z
 
     def memory_retrieval(self, memory, z, q):
         sigma_q = F.elu(q) + 1.0
@@ -63,9 +73,6 @@ class MultiHeadInfiniAttention(nn.Module):
         memory_update = torch.matmul(sigma_k_transposed, v)
         memory += memory_update
         summed_sigma_k = sigma_k.sum(dim=-2)
-        print("Shape of z:", z.shape)
-        print("Shape of summed_sigma_k:", summed_sigma_k.shape)
-        print("self.segment_length:", self.segment_length)
         z += summed_sigma_k.unsqueeze(-1) * self.segment_length  # Adjusting dimension if necessary
         return memory, z
 
@@ -84,12 +91,3 @@ if __name__ == '__main__':
     model = MultiHeadInfiniAttention(n_head=n_head, dim_input=dim_input, dim_k=dim_key, segment_length=segment_len, dim_v=dim_value)
     test = torch.randn(4, 128, dim_input)
     x = model(test)
-
-        
-                 
-
-# 12 layer  8 attention heads of dimension 128  
-# FFn hidden layer 4096
-# Infini-attention segment length N to 2048 
-# for all attention layers and the input sequence length 
-# to 32768 for trainin
