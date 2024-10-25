@@ -228,7 +228,7 @@ y = dropout_layer(x)
 
  ```
 
- 在训练深度神经网络时，通常会在模型的隐藏层之间添加 Dropout 层，以减少过拟合风险，并提高模型的泛化性能。但在推理阶段，通常不需要使用 Dropout。
+ 在训练深度神经网络时，通常会在模型的隐藏层之间添加 Dropout 层，以减少过拟合风险，并提高模型的泛化性能。但在推理阶段，通常不需要使用 Dropout。R
 
 ### torch.nn.parameter.Parameter
 
